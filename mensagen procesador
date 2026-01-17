@@ -1,0 +1,1220 @@
+                                                                                                                                                    
+● Parte 26: message-processor/index.ts (43 linhas)                                                                                                   
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // MESSAGE PROCESSOR MODULE                                                                                                                        
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  // Types                                                                                                                                           
+  export {                                                                                                                                           
+    // Message Types                                                                                                                                 
+    RawMessageType,                                                                                                                                  
+    ProcessedMessageType,                                                                                                                            
+    RawMessage,                                                                                                                                      
+    ProcessedMessage,                                                                                                                                
+    FileData,                                                                                                                                        
+                                                                                                                                                     
+    // Buffer Types                                                                                                                                  
+    BufferEntry,                                                                                                                                     
+    BufferConfig,                                                                                                                                    
+    BufferStatus,                                                                                                                                    
+    DEFAULT_BUFFER_CONFIG,                                                                                                                           
+                                                                                                                                                     
+    // Processor Config                                                                                                                              
+    MessageProcessorConfig,                                                                                                                          
+    DEFAULT_PROCESSOR_CONFIG,                                                                                                                        
+                                                                                                                                                     
+    // Helper Functions                                                                                                                              
+    isMediaType,                                                                                                                                     
+    isAudioType,                                                                                                                                     
+    isIgnorableType,                                                                                                                                 
+    getExtensionFromMimetype,                                                                                                                        
+    createEmptyProcessedMessage,                                                                                                                     
+  } from './types';                                                                                                                                  
+                                                                                                                                                     
+  // Message Processor                                                                                                                               
+  export {                                                                                                                                           
+    MessageProcessor,                                                                                                                                
+    createMessageProcessor,                                                                                                                          
+  } from './processor';                                                                                                                              
+                                                                                                                                                     
+  // Message Buffer                                                                                                                                  
+  export {                                                                                                                                           
+    MessageBuffer,                                                                                                                                   
+    createMessageBuffer,                                                                                                                             
+  } from './buffer';                                                                                                                                 
+                                                                                                                                                     
+  ---                                                                                                                                                
+  Parte 27: message-processor/types.ts (257 linhas)                                                                                                  
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // MESSAGE PROCESSOR TYPES                                                                                                                         
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Tipos de mensagem suportados (raw)                                                                                                              
+   */                                                                                                                                                
+  export type RawMessageType =                                                                                                                       
+    | 'text'                                                                                                                                         
+    | 'audio'                                                                                                                                        
+    | 'image'                                                                                                                                        
+    | 'document'                                                                                                                                     
+    | 'video'                                                                                                                                        
+    | 'sticker'                                                                                                                                      
+    | 'location'                                                                                                                                     
+    | 'contact'                                                                                                                                      
+    | 'unknown';                                                                                                                                     
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Tipos de mensagem processados (output)                                                                                                          
+   */                                                                                                                                                
+  export type ProcessedMessageType =                                                                                                                 
+    | 'text'                                                                                                                                         
+    | 'audio'                                                                                                                                        
+    | 'image'                                                                                                                                        
+    | 'document'                                                                                                                                     
+    | 'video';                                                                                                                                       
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // RAW MESSAGE                                                                                                                                     
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Mensagem bruta recebida do webhook                                                                                                              
+   */                                                                                                                                                
+  export interface RawMessage {                                                                                                                      
+    /** Tipo da mensagem */                                                                                                                          
+    type: RawMessageType;                                                                                                                            
+    /** Conteúdo textual (para mensagens de texto) */                                                                                                
+    content?: string;                                                                                                                                
+    /** URL da mídia (para download) */                                                                                                              
+    mediaUrl?: string;                                                                                                                               
+    /** Mídia em base64 (se já baixada) */                                                                                                           
+    mediaBase64?: string;                                                                                                                            
+    /** Tipo MIME da mídia */                                                                                                                        
+    mimetype?: string;                                                                                                                               
+    /** Nome do arquivo (para documentos) */                                                                                                         
+    filename?: string;                                                                                                                               
+    /** Legenda (para imagens/vídeos/documentos) */                                                                                                  
+    caption?: string;                                                                                                                                
+    /** Duração em segundos (para áudio/vídeo) */                                                                                                    
+    duration?: number;                                                                                                                               
+    /** ID da mensagem original */                                                                                                                   
+    messageId?: string;                                                                                                                              
+    /** Timestamp da mensagem */                                                                                                                     
+    timestamp?: number;                                                                                                                              
+    /** Mensagem citada (reply) */                                                                                                                   
+    quotedMessage?: {                                                                                                                                
+      content?: string;                                                                                                                              
+      type?: RawMessageType;                                                                                                                         
+    };                                                                                                                                               
+  }                                                                                                                                                  
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // PROCESSED MESSAGE                                                                                                                               
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Dados do arquivo processado                                                                                                                     
+   */                                                                                                                                                
+  export interface FileData {                                                                                                                        
+    /** URL original da mídia */                                                                                                                     
+    url?: string;                                                                                                                                    
+    /** Mídia em base64 */                                                                                                                           
+    base64?: string;                                                                                                                                 
+    /** Tipo MIME */                                                                                                                                 
+    mimetype: string;                                                                                                                                
+    /** Nome do arquivo */                                                                                                                           
+    filename?: string;                                                                                                                               
+    /** Tamanho em bytes */                                                                                                                          
+    size?: number;                                                                                                                                   
+  }                                                                                                                                                  
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Mensagem processada pronta para o orquestrador                                                                                                  
+   */                                                                                                                                                
+  export interface ProcessedMessage {                                                                                                                
+    /** Tipo da mensagem */                                                                                                                          
+    type: ProcessedMessageType;                                                                                                                      
+    /** Conteúdo textual (texto original ou transcrição) */                                                                                          
+    content: string;                                                                                                                                 
+    /** Conteúdo original (antes de normalização) */                                                                                                 
+    originalContent?: string;                                                                                                                        
+    /** Transcrição de áudio (se aplicável) */                                                                                                       
+    transcription?: string;                                                                                                                          
+    /** Dados do arquivo (se mídia) */                                                                                                               
+    fileData?: FileData;                                                                                                                             
+    /** Legenda da mídia */                                                                                                                          
+    caption?: string;                                                                                                                                
+    /** ID da mensagem original */                                                                                                                   
+    messageId?: string;                                                                                                                              
+    /** Timestamp de processamento */                                                                                                                
+    processedAt: Date;                                                                                                                               
+    /** Duração do processamento em ms */                                                                                                            
+    processingTimeMs?: number;                                                                                                                       
+    /** Metadados adicionais */                                                                                                                      
+    metadata?: Record<string, unknown>;                                                                                                              
+  }                                                                                                                                                  
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // BUFFER TYPES                                                                                                                                    
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Status do buffer                                                                                                                                
+   */                                                                                                                                                
+  export type BufferStatus = 'waiting' | 'processing' | 'ready';                                                                                     
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Entrada no buffer de mensagens                                                                                                                  
+   */                                                                                                                                                
+  export interface BufferEntry {                                                                                                                     
+    /** ID do remote_jid */                                                                                                                          
+    remoteJid: string;                                                                                                                               
+    /** Mensagens acumuladas */                                                                                                                      
+    messages: ProcessedMessage[];                                                                                                                    
+    /** Timer de debounce */                                                                                                                         
+    timer: NodeJS.Timeout | null;                                                                                                                    
+    /** Status do buffer */                                                                                                                          
+    status: BufferStatus;                                                                                                                            
+    /** Timestamp da primeira mensagem */                                                                                                            
+    startedAt: Date;                                                                                                                                 
+    /** Timestamp da última mensagem */                                                                                                              
+    lastMessageAt: Date;                                                                                                                             
+    /** Promise resolver */                                                                                                                          
+    resolver?: (messages: ProcessedMessage[]) => void;                                                                                               
+    /** Promise rejecter */                                                                                                                          
+    rejecter?: (error: Error) => void;                                                                                                               
+  }                                                                                                                                                  
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Configuração do buffer                                                                                                                          
+   */                                                                                                                                                
+  export interface BufferConfig {                                                                                                                    
+    /** Delay em ms antes de processar (default: 9000) */                                                                                            
+    delayMs: number;                                                                                                                                 
+    /** Máximo de mensagens no buffer (default: 20) */                                                                                               
+    maxMessages: number;                                                                                                                             
+    /** Timeout máximo em ms (default: 60000) */                                                                                                     
+    maxTimeoutMs: number;                                                                                                                            
+  }                                                                                                                                                  
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Configuração padrão do buffer                                                                                                                   
+   */                                                                                                                                                
+  export const DEFAULT_BUFFER_CONFIG: BufferConfig = {                                                                                               
+    delayMs: 9000,                                                                                                                                   
+    maxMessages: 20,                                                                                                                                 
+    maxTimeoutMs: 60000,                                                                                                                             
+  };                                                                                                                                                 
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // PROCESSOR CONFIG                                                                                                                                
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Configuração do processador de mensagens                                                                                                        
+   */                                                                                                                                                
+  export interface MessageProcessorConfig {                                                                                                          
+    /** Transcrever áudios automaticamente */                                                                                                        
+    transcribeAudio: boolean;                                                                                                                        
+    /** Idioma para transcrição (default: 'pt') */                                                                                                   
+    transcriptionLanguage: string;                                                                                                                   
+    /** Baixar mídias automaticamente */                                                                                                             
+    downloadMedia: boolean;                                                                                                                          
+    /** Tamanho máximo de mídia em bytes (default: 20MB) */                                                                                          
+    maxMediaSizeBytes: number;                                                                                                                       
+    /** Normalizar texto (remover espaços extras, etc) */                                                                                            
+    normalizeText: boolean;                                                                                                                          
+    /** Timeout para download de mídia em ms */                                                                                                      
+    downloadTimeoutMs: number;                                                                                                                       
+  }                                                                                                                                                  
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Configuração padrão do processador                                                                                                              
+   */                                                                                                                                                
+  export const DEFAULT_PROCESSOR_CONFIG: MessageProcessorConfig = {                                                                                  
+    transcribeAudio: true,                                                                                                                           
+    transcriptionLanguage: 'pt',                                                                                                                     
+    downloadMedia: true,                                                                                                                             
+    maxMediaSizeBytes: 20 * 1024 * 1024, // 20MB                                                                                                     
+    normalizeText: true,                                                                                                                             
+    downloadTimeoutMs: 30000,                                                                                                                        
+  };                                                                                                                                                 
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // HELPER FUNCTIONS                                                                                                                                
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Verifica se é um tipo de mídia                                                                                                                  
+   */                                                                                                                                                
+  export function isMediaType(type: RawMessageType): boolean {                                                                                       
+    return ['audio', 'image', 'document', 'video', 'sticker'].includes(type);                                                                        
+  }                                                                                                                                                  
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Verifica se é áudio                                                                                                                             
+   */                                                                                                                                                
+  export function isAudioType(type: RawMessageType): boolean {                                                                                       
+    return type === 'audio';                                                                                                                         
+  }                                                                                                                                                  
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Verifica se é tipo ignorável                                                                                                                    
+   */                                                                                                                                                
+  export function isIgnorableType(type: RawMessageType): boolean {                                                                                   
+    return ['sticker', 'location', 'contact', 'unknown'].includes(type);                                                                             
+  }                                                                                                                                                  
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Obtém extensão do arquivo pelo mimetype                                                                                                         
+   */                                                                                                                                                
+  export function getExtensionFromMimetype(mimetype: string): string {                                                                               
+    const mimeToExt: Record<string, string> = {                                                                                                      
+      'audio/ogg': 'ogg',                                                                                                                            
+      'audio/mpeg': 'mp3',                                                                                                                           
+      'audio/mp4': 'm4a',                                                                                                                            
+      'audio/wav': 'wav',                                                                                                                            
+      'audio/webm': 'webm',                                                                                                                          
+      'image/jpeg': 'jpg',                                                                                                                           
+      'image/png': 'png',                                                                                                                            
+      'image/gif': 'gif',                                                                                                                            
+      'image/webp': 'webp',                                                                                                                          
+      'video/mp4': 'mp4',                                                                                                                            
+      'video/webm': 'webm',                                                                                                                          
+      'application/pdf': 'pdf',                                                                                                                      
+      'application/msword': 'doc',                                                                                                                   
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',                                                             
+      'application/vnd.ms-excel': 'xls',                                                                                                             
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',                                                                   
+    };                                                                                                                                               
+                                                                                                                                                     
+    return mimeToExt[mimetype] || 'bin';                                                                                                             
+  }                                                                                                                                                  
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Cria uma ProcessedMessage vazia                                                                                                                 
+   */                                                                                                                                                
+  export function createEmptyProcessedMessage(type: ProcessedMessageType = 'text'): ProcessedMessage {                                               
+    return {                                                                                                                                         
+      type,                                                                                                                                          
+      content: '',                                                                                                                                   
+      processedAt: new Date(),                                                                                                                       
+    };                                                                                                                                               
+  }                                                                                                                                                  
+                                                                                                                                                     
+  ---                                                                                                                                                
+  Parte 28: message-processor/buffer.ts (387 linhas)                                                                                                 
+                                                                                                                                                     
+  import {                                                                                                                                           
+    ProcessedMessage,                                                                                                                                
+    BufferEntry,                                                                                                                                     
+    BufferConfig,                                                                                                                                    
+    DEFAULT_BUFFER_CONFIG,                                                                                                                           
+    BufferStatus,                                                                                                                                    
+  } from './types';                                                                                                                                  
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // LOGGER INTERFACE                                                                                                                                
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  interface Logger {                                                                                                                                 
+    debug(message: string, data?: unknown): void;                                                                                                    
+    info(message: string, data?: unknown): void;                                                                                                     
+    warn(message: string, data?: unknown): void;                                                                                                     
+    error(message: string, data?: unknown): void;                                                                                                    
+  }                                                                                                                                                  
+                                                                                                                                                     
+  const defaultLogger: Logger = {                                                                                                                    
+    debug: (msg, data) => console.debug(`[MessageBuffer] ${msg}`, data ?? ''),                                                                       
+    info: (msg, data) => console.info(`[MessageBuffer] ${msg}`, data ?? ''),                                                                         
+    warn: (msg, data) => console.warn(`[MessageBuffer] ${msg}`, data ?? ''),                                                                         
+    error: (msg, data) => console.error(`[MessageBuffer] ${msg}`, data ?? ''),                                                                       
+  };                                                                                                                                                 
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // MESSAGE BUFFER CLASS                                                                                                                            
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Buffer de mensagens                                                                                                                             
+   *                                                                                                                                                 
+   * Agrupa mensagens rápidas enviadas em sequência em uma única mensagem.                                                                           
+   * Útil para quando o usuário envia várias mensagens curtas seguidas.                                                                              
+   *                                                                                                                                                 
+   * Funcionamento:                                                                                                                                  
+   * 1. Primeira mensagem: inicia timer de 9 segundos                                                                                                
+   * 2. Mensagens seguintes: reseta o timer                                                                                                          
+   * 3. Quando timer dispara: concatena todas as mensagens e resolve                                                                                 
+   * 4. Se atingir max mensagens: dispara imediatamente                                                                                              
+   *                                                                                                                                                 
+   * @example                                                                                                                                        
+   * ```typescript                                                                                                                                   
+   * const buffer = new MessageBuffer();                                                                                                             
+   *                                                                                                                                                 
+   * // Mensagens chegam em sequência rápida                                                                                                         
+   * buffer.add('user123', msg1); // inicia timer                                                                                                    
+   * buffer.add('user123', msg2); // reseta timer                                                                                                    
+   * buffer.add('user123', msg3); // reseta timer                                                                                                    
+   *                                                                                                                                                 
+   * // Após 9s sem novas mensagens, resolve com todas concatenadas                                                                                  
+   * const messages = await buffer.add('user123', msg4);                                                                                             
+   * // messages = [mensagemConcatenada]                                                                                                             
+   * ```                                                                                                                                             
+   */                                                                                                                                                
+  export class MessageBuffer {                                                                                                                       
+    private buffers: Map<string, BufferEntry> = new Map();                                                                                           
+    private config: BufferConfig;                                                                                                                    
+    private logger: Logger;                                                                                                                          
+                                                                                                                                                     
+    constructor(config?: Partial<BufferConfig>, logger?: Logger) {                                                                                   
+      this.config = { ...DEFAULT_BUFFER_CONFIG, ...config };                                                                                         
+      this.logger = logger || defaultLogger;                                                                                                         
+                                                                                                                                                     
+      this.logger.info('MessageBuffer initialized', {                                                                                                
+        delayMs: this.config.delayMs,                                                                                                                
+        maxMessages: this.config.maxMessages,                                                                                                        
+      });                                                                                                                                            
+    }                                                                                                                                                
+                                                                                                                                                     
+    // ==========================================================================                                                                    
+    // MAIN ADD METHOD                                                                                                                               
+    // ==========================================================================                                                                    
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Adiciona uma mensagem ao buffer                                                                                                               
+     *                                                                                                                                               
+     * @param remoteJid - ID único do contato                                                                                                        
+     * @param message - Mensagem processada                                                                                                          
+     * @returns Promise que resolve quando o buffer estiver pronto                                                                                   
+     */                                                                                                                                              
+    async add(remoteJid: string, message: ProcessedMessage): Promise<ProcessedMessage[]> {                                                           
+      return new Promise((resolve, reject) => {                                                                                                      
+        let entry = this.buffers.get(remoteJid);                                                                                                     
+                                                                                                                                                     
+        if (!entry) {                                                                                                                                
+          // Criar nova entrada no buffer                                                                                                            
+          entry = this.createBufferEntry(remoteJid, resolve, reject);                                                                                
+          this.buffers.set(remoteJid, entry);                                                                                                        
+          this.logger.debug('Created new buffer', { remoteJid });                                                                                    
+        } else {                                                                                                                                     
+          // Atualizar resolver/rejecter para a Promise mais recente                                                                                 
+          entry.resolver = resolve;                                                                                                                  
+          entry.rejecter = reject;                                                                                                                   
+                                                                                                                                                     
+          // Cancelar timer existente                                                                                                                
+          if (entry.timer) {                                                                                                                         
+            clearTimeout(entry.timer);                                                                                                               
+            entry.timer = null;                                                                                                                      
+          }                                                                                                                                          
+        }                                                                                                                                            
+                                                                                                                                                     
+        // Adicionar mensagem                                                                                                                        
+        entry.messages.push(message);                                                                                                                
+        entry.lastMessageAt = new Date();                                                                                                            
+        entry.status = 'waiting';                                                                                                                    
+                                                                                                                                                     
+        this.logger.debug('Message added to buffer', {                                                                                               
+          remoteJid,                                                                                                                                 
+          messageCount: entry.messages.length,                                                                                                       
+        });                                                                                                                                          
+                                                                                                                                                     
+        // Verificar se atingiu máximo de mensagens                                                                                                  
+        if (entry.messages.length >= this.config.maxMessages) {                                                                                      
+          this.logger.info('Max messages reached, flushing', { remoteJid });                                                                         
+          this.flush(remoteJid);                                                                                                                     
+          return;                                                                                                                                    
+        }                                                                                                                                            
+                                                                                                                                                     
+        // Verificar se atingiu timeout máximo                                                                                                       
+        const elapsed = Date.now() - entry.startedAt.getTime();                                                                                      
+        if (elapsed >= this.config.maxTimeoutMs) {                                                                                                   
+          this.logger.info('Max timeout reached, flushing', { remoteJid });                                                                          
+          this.flush(remoteJid);                                                                                                                     
+          return;                                                                                                                                    
+        }                                                                                                                                            
+                                                                                                                                                     
+        // Iniciar novo timer                                                                                                                        
+        entry.timer = setTimeout(() => {                                                                                                             
+          this.logger.debug('Timer fired, flushing', { remoteJid });                                                                                 
+          this.flush(remoteJid);                                                                                                                     
+        }, this.config.delayMs);                                                                                                                     
+      });                                                                                                                                            
+    }                                                                                                                                                
+                                                                                                                                                     
+    // ==========================================================================                                                                    
+    // FLUSH                                                                                                                                         
+    // ==========================================================================                                                                    
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Força o flush do buffer para um remoteJid                                                                                                     
+     */                                                                                                                                              
+    flush(remoteJid: string): void {                                                                                                                 
+      const entry = this.buffers.get(remoteJid);                                                                                                     
+                                                                                                                                                     
+      if (!entry) {                                                                                                                                  
+        this.logger.warn('No buffer found to flush', { remoteJid });                                                                                 
+        return;                                                                                                                                      
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Cancelar timer                                                                                                                              
+      if (entry.timer) {                                                                                                                             
+        clearTimeout(entry.timer);                                                                                                                   
+        entry.timer = null;                                                                                                                          
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Marcar como processando                                                                                                                     
+      entry.status = 'processing';                                                                                                                   
+                                                                                                                                                     
+      // Concatenar mensagens                                                                                                                        
+      const concatenated = this.concatenateMessages(entry.messages);                                                                                 
+                                                                                                                                                     
+      this.logger.info('Buffer flushed', {                                                                                                           
+        remoteJid,                                                                                                                                   
+        messageCount: entry.messages.length,                                                                                                         
+        totalDuration: Date.now() - entry.startedAt.getTime(),                                                                                       
+      });                                                                                                                                            
+                                                                                                                                                     
+      // Resolver Promise                                                                                                                            
+      if (entry.resolver) {                                                                                                                          
+        entry.resolver([concatenated]);                                                                                                              
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Limpar buffer                                                                                                                               
+      this.buffers.delete(remoteJid);                                                                                                                
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Força flush de todos os buffers                                                                                                               
+     */                                                                                                                                              
+    flushAll(): void {                                                                                                                               
+      for (const remoteJid of this.buffers.keys()) {                                                                                                 
+        this.flush(remoteJid);                                                                                                                       
+      }                                                                                                                                              
+    }                                                                                                                                                
+                                                                                                                                                     
+    // ==========================================================================                                                                    
+    // CONCATENATION                                                                                                                                 
+    // ==========================================================================                                                                    
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Concatena múltiplas mensagens em uma só                                                                                                       
+     */                                                                                                                                              
+    private concatenateMessages(messages: ProcessedMessage[]): ProcessedMessage {                                                                    
+      if (messages.length === 0) {                                                                                                                   
+        return {                                                                                                                                     
+          type: 'text',                                                                                                                              
+          content: '',                                                                                                                               
+          processedAt: new Date(),                                                                                                                   
+        };                                                                                                                                           
+      }                                                                                                                                              
+                                                                                                                                                     
+      if (messages.length === 1) {                                                                                                                   
+        return messages[0];                                                                                                                          
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Separar por tipo                                                                                                                            
+      const textMessages = messages.filter((m) => m.type === 'text');                                                                                
+      const audioMessages = messages.filter((m) => m.type === 'audio');                                                                              
+      const otherMessages = messages.filter((m) => !['text', 'audio'].includes(m.type));                                                             
+                                                                                                                                                     
+      // Concatenar conteúdo textual                                                                                                                 
+      const textContent = messages                                                                                                                   
+        .map((m) => m.content)                                                                                                                       
+        .filter((c) => c && c.trim())                                                                                                                
+        .join('\n');                                                                                                                                 
+                                                                                                                                                     
+      // Concatenar transcrições                                                                                                                     
+      const transcriptions = messages                                                                                                                
+        .filter((m) => m.transcription)                                                                                                              
+        .map((m) => m.transcription)                                                                                                                 
+        .join('\n');                                                                                                                                 
+                                                                                                                                                     
+      // Pegar primeiro fileData disponível (para mídias)                                                                                            
+      const fileData = messages.find((m) => m.fileData)?.fileData;                                                                                   
+                                                                                                                                                     
+      // Determinar tipo principal                                                                                                                   
+      let type: ProcessedMessage['type'] = 'text';                                                                                                   
+      if (otherMessages.length > 0) {                                                                                                                
+        type = otherMessages[0].type;                                                                                                                
+      } else if (audioMessages.length > 0) {                                                                                                         
+        type = 'audio';                                                                                                                              
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Concatenar captions                                                                                                                         
+      const captions = messages                                                                                                                      
+        .filter((m) => m.caption)                                                                                                                    
+        .map((m) => m.caption)                                                                                                                       
+        .join('\n');                                                                                                                                 
+                                                                                                                                                     
+      // Calcular tempo de processamento total                                                                                                       
+      const totalProcessingTime = messages.reduce(                                                                                                   
+        (acc, m) => acc + (m.processingTimeMs || 0),                                                                                                 
+        0                                                                                                                                            
+      );                                                                                                                                             
+                                                                                                                                                     
+      return {                                                                                                                                       
+        type,                                                                                                                                        
+        content: textContent,                                                                                                                        
+        originalContent: messages.length > 1 ? textContent : messages[0].originalContent,                                                            
+        transcription: transcriptions || undefined,                                                                                                  
+        fileData,                                                                                                                                    
+        caption: captions || undefined,                                                                                                              
+        processedAt: new Date(),                                                                                                                     
+        processingTimeMs: totalProcessingTime,                                                                                                       
+        metadata: {                                                                                                                                  
+          concatenatedFrom: messages.length,                                                                                                         
+          messageTypes: [...new Set(messages.map((m) => m.type))],                                                                                   
+        },                                                                                                                                           
+      };                                                                                                                                             
+    }                                                                                                                                                
+                                                                                                                                                     
+    // ==========================================================================                                                                    
+    // HELPER METHODS                                                                                                                                
+    // ==========================================================================                                                                    
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Cria uma nova entrada no buffer                                                                                                               
+     */                                                                                                                                              
+    private createBufferEntry(                                                                                                                       
+      remoteJid: string,                                                                                                                             
+      resolver: (messages: ProcessedMessage[]) => void,                                                                                              
+      rejecter: (error: Error) => void                                                                                                               
+    ): BufferEntry {                                                                                                                                 
+      return {                                                                                                                                       
+        remoteJid,                                                                                                                                   
+        messages: [],                                                                                                                                
+        timer: null,                                                                                                                                 
+        status: 'waiting',                                                                                                                           
+        startedAt: new Date(),                                                                                                                       
+        lastMessageAt: new Date(),                                                                                                                   
+        resolver,                                                                                                                                    
+        rejecter,                                                                                                                                    
+      };                                                                                                                                             
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Verifica se há buffer ativo para um remoteJid                                                                                                 
+     */                                                                                                                                              
+    hasBuffer(remoteJid: string): boolean {                                                                                                          
+      return this.buffers.has(remoteJid);                                                                                                            
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Retorna contagem de mensagens no buffer                                                                                                       
+     */                                                                                                                                              
+    getBufferCount(remoteJid: string): number {                                                                                                      
+      return this.buffers.get(remoteJid)?.messages.length || 0;                                                                                      
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Retorna status do buffer                                                                                                                      
+     */                                                                                                                                              
+    getBufferStatus(remoteJid: string): BufferStatus | null {                                                                                        
+      return this.buffers.get(remoteJid)?.status || null;                                                                                            
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Cancela buffer sem processar                                                                                                                  
+     */                                                                                                                                              
+    cancel(remoteJid: string): void {                                                                                                                
+      const entry = this.buffers.get(remoteJid);                                                                                                     
+                                                                                                                                                     
+      if (!entry) {                                                                                                                                  
+        return;                                                                                                                                      
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Cancelar timer                                                                                                                              
+      if (entry.timer) {                                                                                                                             
+        clearTimeout(entry.timer);                                                                                                                   
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Rejeitar Promise                                                                                                                            
+      if (entry.rejecter) {                                                                                                                          
+        entry.rejecter(new Error('Buffer cancelled'));                                                                                               
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Limpar                                                                                                                                      
+      this.buffers.delete(remoteJid);                                                                                                                
+                                                                                                                                                     
+      this.logger.info('Buffer cancelled', { remoteJid });                                                                                           
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Limpa todos os buffers sem processar                                                                                                          
+     */                                                                                                                                              
+    clear(): void {                                                                                                                                  
+      for (const [remoteJid, entry] of this.buffers) {                                                                                               
+        if (entry.timer) {                                                                                                                           
+          clearTimeout(entry.timer);                                                                                                                 
+        }                                                                                                                                            
+        if (entry.rejecter) {                                                                                                                        
+          entry.rejecter(new Error('Buffer cleared'));                                                                                               
+        }                                                                                                                                            
+      }                                                                                                                                              
+                                                                                                                                                     
+      this.buffers.clear();                                                                                                                          
+      this.logger.info('All buffers cleared');                                                                                                       
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Retorna contagem total de buffers ativos                                                                                                      
+     */                                                                                                                                              
+    getActiveBufferCount(): number {                                                                                                                 
+      return this.buffers.size;                                                                                                                      
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Atualiza configuração                                                                                                                         
+     */                                                                                                                                              
+    setConfig(config: Partial<BufferConfig>): void {                                                                                                 
+      this.config = { ...this.config, ...config };                                                                                                   
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Retorna configuração atual                                                                                                                    
+     */                                                                                                                                              
+    getConfig(): BufferConfig {                                                                                                                      
+      return { ...this.config };                                                                                                                     
+    }                                                                                                                                                
+  }                                                                                                                                                  
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // FACTORY FUNCTION                                                                                                                                
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Cria uma instância do MessageBuffer                                                                                                             
+   */                                                                                                                                                
+  export function createMessageBuffer(                                                                                                               
+    config?: Partial<BufferConfig>,                                                                                                                  
+    logger?: Logger                                                                                                                                  
+  ): MessageBuffer {                                                                                                                                 
+    return new MessageBuffer(config, logger);                                                                                                        
+  }                                                                                                                                                  
+                                                                                                                                                     
+  ---                                                                                                                                                
+  Parte 29: message-processor/processor.ts (522 linhas)                                                                                              
+                                                                                                                                                     
+  import axios from 'axios';                                                                                                                         
+  import {                                                                                                                                           
+    RawMessage,                                                                                                                                      
+    ProcessedMessage,                                                                                                                                
+    FileData,                                                                                                                                        
+    MessageProcessorConfig,                                                                                                                          
+    DEFAULT_PROCESSOR_CONFIG,                                                                                                                        
+    isMediaType,                                                                                                                                     
+    isAudioType,                                                                                                                                     
+    isIgnorableType,                                                                                                                                 
+    getExtensionFromMimetype,                                                                                                                        
+    createEmptyProcessedMessage,                                                                                                                     
+    ProcessedMessageType,                                                                                                                            
+  } from './types';                                                                                                                                  
+  import { WhisperClient } from '../../services/ai/whisper';                                                                                         
+  import { UazapiClient } from '../../services/uazapi';                                                                                              
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // LOGGER INTERFACE                                                                                                                                
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  interface Logger {                                                                                                                                 
+    debug(message: string, data?: unknown): void;                                                                                                    
+    info(message: string, data?: unknown): void;                                                                                                     
+    warn(message: string, data?: unknown): void;                                                                                                     
+    error(message: string, data?: unknown): void;                                                                                                    
+  }                                                                                                                                                  
+                                                                                                                                                     
+  const defaultLogger: Logger = {                                                                                                                    
+    debug: (msg, data) => console.debug(`[MessageProcessor] ${msg}`, data ?? ''),                                                                    
+    info: (msg, data) => console.info(`[MessageProcessor] ${msg}`, data ?? ''),                                                                      
+    warn: (msg, data) => console.warn(`[MessageProcessor] ${msg}`, data ?? ''),                                                                      
+    error: (msg, data) => console.error(`[MessageProcessor] ${msg}`, data ?? ''),                                                                    
+  };                                                                                                                                                 
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // MESSAGE PROCESSOR CLASS                                                                                                                         
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Processador de mensagens                                                                                                                        
+   *                                                                                                                                                 
+   * Responsável por:                                                                                                                                
+   * - Processar diferentes tipos de mensagem (texto, áudio, imagem, etc)                                                                            
+   * - Transcrever áudios via Whisper                                                                                                                
+   * - Baixar mídias                                                                                                                                 
+   * - Normalizar texto                                                                                                                              
+   */                                                                                                                                                
+  export class MessageProcessor {                                                                                                                    
+    private whisperClient: WhisperClient | null;                                                                                                     
+    private uazapiClient: UazapiClient | null;                                                                                                       
+    private logger: Logger;                                                                                                                          
+    private config: MessageProcessorConfig;                                                                                                          
+                                                                                                                                                     
+    constructor(options?: {                                                                                                                          
+      whisperClient?: WhisperClient;                                                                                                                 
+      uazapiClient?: UazapiClient;                                                                                                                   
+      logger?: Logger;                                                                                                                               
+      config?: Partial<MessageProcessorConfig>;                                                                                                      
+    }) {                                                                                                                                             
+      this.whisperClient = options?.whisperClient || null;                                                                                           
+      this.uazapiClient = options?.uazapiClient || null;                                                                                             
+      this.logger = options?.logger || defaultLogger;                                                                                                
+      this.config = { ...DEFAULT_PROCESSOR_CONFIG, ...options?.config };                                                                             
+                                                                                                                                                     
+      this.logger.info('MessageProcessor initialized', {                                                                                             
+        transcribeAudio: this.config.transcribeAudio,                                                                                                
+        downloadMedia: this.config.downloadMedia,                                                                                                    
+      });                                                                                                                                            
+    }                                                                                                                                                
+                                                                                                                                                     
+    // ==========================================================================                                                                    
+    // MAIN PROCESS METHOD                                                                                                                           
+    // ==========================================================================                                                                    
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Processa uma mensagem bruta e retorna uma mensagem processada                                                                                 
+     */                                                                                                                                              
+    async process(raw: RawMessage): Promise<ProcessedMessage> {                                                                                      
+      const startTime = Date.now();                                                                                                                  
+                                                                                                                                                     
+      this.logger.debug('Processing message', { type: raw.type });                                                                                   
+                                                                                                                                                     
+      try {                                                                                                                                          
+        let processed: ProcessedMessage;                                                                                                             
+                                                                                                                                                     
+        switch (raw.type) {                                                                                                                          
+          case 'text':                                                                                                                               
+            processed = await this.processText(raw);                                                                                                 
+            break;                                                                                                                                   
+                                                                                                                                                     
+          case 'audio':                                                                                                                              
+            processed = await this.processAudio(raw);                                                                                                
+            break;                                                                                                                                   
+                                                                                                                                                     
+          case 'image':                                                                                                                              
+            processed = await this.processImage(raw);                                                                                                
+            break;                                                                                                                                   
+                                                                                                                                                     
+          case 'document':                                                                                                                           
+            processed = await this.processDocument(raw);                                                                                             
+            break;                                                                                                                                   
+                                                                                                                                                     
+          case 'video':                                                                                                                              
+            processed = await this.processVideo(raw);                                                                                                
+            break;                                                                                                                                   
+                                                                                                                                                     
+          case 'sticker':                                                                                                                            
+            processed = this.processSticker(raw);                                                                                                    
+            break;                                                                                                                                   
+                                                                                                                                                     
+          case 'location':                                                                                                                           
+            processed = this.processLocation(raw);                                                                                                   
+            break;                                                                                                                                   
+                                                                                                                                                     
+          case 'contact':                                                                                                                            
+            processed = this.processContact(raw);                                                                                                    
+            break;                                                                                                                                   
+                                                                                                                                                     
+          default:                                                                                                                                   
+            processed = this.processUnknown(raw);                                                                                                    
+        }                                                                                                                                            
+                                                                                                                                                     
+        // Adicionar metadados de processamento                                                                                                      
+        processed.processingTimeMs = Date.now() - startTime;                                                                                         
+        processed.messageId = raw.messageId;                                                                                                         
+                                                                                                                                                     
+        this.logger.debug('Message processed', {                                                                                                     
+          type: processed.type,                                                                                                                      
+          contentLength: processed.content.length,                                                                                                   
+          processingTimeMs: processed.processingTimeMs,                                                                                              
+        });                                                                                                                                          
+                                                                                                                                                     
+        return processed;                                                                                                                            
+      } catch (error) {                                                                                                                              
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';                                                               
+        this.logger.error('Error processing message', { type: raw.type, error: errorMessage });                                                      
+                                                                                                                                                     
+        // Retornar mensagem de erro                                                                                                                 
+        return {                                                                                                                                     
+          type: 'text',                                                                                                                              
+          content: '[Erro ao processar mensagem]',                                                                                                   
+          processedAt: new Date(),                                                                                                                   
+          processingTimeMs: Date.now() - startTime,                                                                                                  
+          metadata: { error: errorMessage },                                                                                                         
+        };                                                                                                                                           
+      }                                                                                                                                              
+    }                                                                                                                                                
+                                                                                                                                                     
+    // ==========================================================================                                                                    
+    // TYPE-SPECIFIC PROCESSORS                                                                                                                      
+    // ==========================================================================                                                                    
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Processa mensagem de texto                                                                                                                    
+     */                                                                                                                                              
+    private async processText(raw: RawMessage): Promise<ProcessedMessage> {                                                                          
+      const content = raw.content || '';                                                                                                             
+      const normalizedContent = this.config.normalizeText                                                                                            
+        ? this.normalizeText(content)                                                                                                                
+        : content;                                                                                                                                   
+                                                                                                                                                     
+      return {                                                                                                                                       
+        type: 'text',                                                                                                                                
+        content: normalizedContent,                                                                                                                  
+        originalContent: content !== normalizedContent ? content : undefined,                                                                        
+        processedAt: new Date(),                                                                                                                     
+      };                                                                                                                                             
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Processa mensagem de áudio                                                                                                                    
+     */                                                                                                                                              
+    private async processAudio(raw: RawMessage): Promise<ProcessedMessage> {                                                                         
+      let transcription = '';                                                                                                                        
+      let fileData: FileData | undefined;                                                                                                            
+                                                                                                                                                     
+      // Baixar mídia se necessário                                                                                                                  
+      if (raw.mediaUrl && this.config.downloadMedia) {                                                                                               
+        try {                                                                                                                                        
+          const mediaBuffer = await this.downloadMedia(raw.mediaUrl);                                                                                
+          const base64 = mediaBuffer.toString('base64');                                                                                             
+                                                                                                                                                     
+          fileData = {                                                                                                                               
+            url: raw.mediaUrl,                                                                                                                       
+            base64,                                                                                                                                  
+            mimetype: raw.mimetype || 'audio/ogg',                                                                                                   
+            filename: raw.filename || `audio.${getExtensionFromMimetype(raw.mimetype || 'audio/ogg')}`,                                              
+            size: mediaBuffer.length,                                                                                                                
+          };                                                                                                                                         
+                                                                                                                                                     
+          // Transcrever se habilitado                                                                                                               
+          if (this.config.transcribeAudio && this.whisperClient) {                                                                                   
+            transcription = await this.transcribeAudio(base64, raw.mimetype || 'audio/ogg');                                                         
+          }                                                                                                                                          
+        } catch (error) {                                                                                                                            
+          this.logger.error('Error downloading/transcribing audio', { error });                                                                      
+        }                                                                                                                                            
+      } else if (raw.mediaBase64) {                                                                                                                  
+        // Já tem base64                                                                                                                             
+        fileData = {                                                                                                                                 
+          base64: raw.mediaBase64,                                                                                                                   
+          mimetype: raw.mimetype || 'audio/ogg',                                                                                                     
+          filename: raw.filename,                                                                                                                    
+        };                                                                                                                                           
+                                                                                                                                                     
+        if (this.config.transcribeAudio && this.whisperClient) {                                                                                     
+          transcription = await this.transcribeAudio(raw.mediaBase64, raw.mimetype || 'audio/ogg');                                                  
+        }                                                                                                                                            
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Se transcrição falhou, usar placeholder                                                                                                     
+      const content = transcription || '[Áudio não transcrito]';                                                                                     
+                                                                                                                                                     
+      return {                                                                                                                                       
+        type: 'audio',                                                                                                                               
+        content: this.config.normalizeText ? this.normalizeText(content) : content,                                                                  
+        transcription: transcription || undefined,                                                                                                   
+        fileData,                                                                                                                                    
+        processedAt: new Date(),                                                                                                                     
+      };                                                                                                                                             
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Processa mensagem de imagem                                                                                                                   
+     */                                                                                                                                              
+    private async processImage(raw: RawMessage): Promise<ProcessedMessage> {                                                                         
+      let fileData: FileData | undefined;                                                                                                            
+                                                                                                                                                     
+      // Baixar mídia se necessário                                                                                                                  
+      if (raw.mediaUrl && this.config.downloadMedia) {                                                                                               
+        try {                                                                                                                                        
+          const mediaBuffer = await this.downloadMedia(raw.mediaUrl);                                                                                
+                                                                                                                                                     
+          fileData = {                                                                                                                               
+            url: raw.mediaUrl,                                                                                                                       
+            base64: mediaBuffer.toString('base64'),                                                                                                  
+            mimetype: raw.mimetype || 'image/jpeg',                                                                                                  
+            filename: raw.filename || `image.${getExtensionFromMimetype(raw.mimetype || 'image/jpeg')}`,                                             
+            size: mediaBuffer.length,                                                                                                                
+          };                                                                                                                                         
+        } catch (error) {                                                                                                                            
+          this.logger.error('Error downloading image', { error });                                                                                   
+        }                                                                                                                                            
+      } else if (raw.mediaBase64) {                                                                                                                  
+        fileData = {                                                                                                                                 
+          base64: raw.mediaBase64,                                                                                                                   
+          mimetype: raw.mimetype || 'image/jpeg',                                                                                                    
+          filename: raw.filename,                                                                                                                    
+        };                                                                                                                                           
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Usar caption ou placeholder                                                                                                                 
+      const content = raw.caption || '[Imagem recebida]';                                                                                            
+                                                                                                                                                     
+      return {                                                                                                                                       
+        type: 'image',                                                                                                                               
+        content: this.config.normalizeText ? this.normalizeText(content) : content,                                                                  
+        caption: raw.caption,                                                                                                                        
+        fileData,                                                                                                                                    
+        processedAt: new Date(),                                                                                                                     
+      };                                                                                                                                             
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Processa documento                                                                                                                            
+     */                                                                                                                                              
+    private async processDocument(raw: RawMessage): Promise<ProcessedMessage> {                                                                      
+      let fileData: FileData | undefined;                                                                                                            
+                                                                                                                                                     
+      // Baixar mídia se necessário                                                                                                                  
+      if (raw.mediaUrl && this.config.downloadMedia) {                                                                                               
+        try {                                                                                                                                        
+          const mediaBuffer = await this.downloadMedia(raw.mediaUrl);                                                                                
+                                                                                                                                                     
+          fileData = {                                                                                                                               
+            url: raw.mediaUrl,                                                                                                                       
+            base64: mediaBuffer.toString('base64'),                                                                                                  
+            mimetype: raw.mimetype || 'application/octet-stream',                                                                                    
+            filename: raw.filename || 'document',                                                                                                    
+            size: mediaBuffer.length,                                                                                                                
+          };                                                                                                                                         
+        } catch (error) {                                                                                                                            
+          this.logger.error('Error downloading document', { error });                                                                                
+        }                                                                                                                                            
+      } else if (raw.mediaBase64) {                                                                                                                  
+        fileData = {                                                                                                                                 
+          base64: raw.mediaBase64,                                                                                                                   
+          mimetype: raw.mimetype || 'application/octet-stream',                                                                                      
+          filename: raw.filename,                                                                                                                    
+        };                                                                                                                                           
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Usar caption ou filename ou placeholder                                                                                                     
+      const content = raw.caption || raw.filename || '[Documento recebido]';                                                                         
+                                                                                                                                                     
+      return {                                                                                                                                       
+        type: 'document',                                                                                                                            
+        content: this.config.normalizeText ? this.normalizeText(content) : content,                                                                  
+        caption: raw.caption,                                                                                                                        
+        fileData,                                                                                                                                    
+        processedAt: new Date(),                                                                                                                     
+      };                                                                                                                                             
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Processa vídeo                                                                                                                                
+     */                                                                                                                                              
+    private async processVideo(raw: RawMessage): Promise<ProcessedMessage> {                                                                         
+      let fileData: FileData | undefined;                                                                                                            
+                                                                                                                                                     
+      // Baixar mídia se necessário                                                                                                                  
+      if (raw.mediaUrl && this.config.downloadMedia) {                                                                                               
+        try {                                                                                                                                        
+          const mediaBuffer = await this.downloadMedia(raw.mediaUrl);                                                                                
+                                                                                                                                                     
+          fileData = {                                                                                                                               
+            url: raw.mediaUrl,                                                                                                                       
+            base64: mediaBuffer.toString('base64'),                                                                                                  
+            mimetype: raw.mimetype || 'video/mp4',                                                                                                   
+            filename: raw.filename || `video.${getExtensionFromMimetype(raw.mimetype || 'video/mp4')}`,                                              
+            size: mediaBuffer.length,                                                                                                                
+          };                                                                                                                                         
+        } catch (error) {                                                                                                                            
+          this.logger.error('Error downloading video', { error });                                                                                   
+        }                                                                                                                                            
+      } else if (raw.mediaBase64) {                                                                                                                  
+        fileData = {                                                                                                                                 
+          base64: raw.mediaBase64,                                                                                                                   
+          mimetype: raw.mimetype || 'video/mp4',                                                                                                     
+          filename: raw.filename,                                                                                                                    
+        };                                                                                                                                           
+      }                                                                                                                                              
+                                                                                                                                                     
+      // Usar caption ou placeholder                                                                                                                 
+      const content = raw.caption || '[Vídeo recebido]';                                                                                             
+                                                                                                                                                     
+      return {                                                                                                                                       
+        type: 'video',                                                                                                                               
+        content: this.config.normalizeText ? this.normalizeText(content) : content,                                                                  
+        caption: raw.caption,                                                                                                                        
+        fileData,                                                                                                                                    
+        processedAt: new Date(),                                                                                                                     
+      };                                                                                                                                             
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Processa sticker (converte para emoji)                                                                                                        
+     */                                                                                                                                              
+    private processSticker(raw: RawMessage): ProcessedMessage {                                                                                      
+      return {                                                                                                                                       
+        type: 'text',                                                                                                                                
+        content: '[Sticker recebido]',                                                                                                               
+        processedAt: new Date(),                                                                                                                     
+        metadata: { originalType: 'sticker' },                                                                                                       
+      };                                                                                                                                             
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Processa localização                                                                                                                          
+     */                                                                                                                                              
+    private processLocation(raw: RawMessage): ProcessedMessage {                                                                                     
+      return {                                                                                                                                       
+        type: 'text',                                                                                                                                
+        content: '[Localização compartilhada]',                                                                                                      
+        processedAt: new Date(),                                                                                                                     
+        metadata: { originalType: 'location' },                                                                                                      
+      };                                                                                                                                             
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Processa contato                                                                                                                              
+     */                                                                                                                                              
+    private processContact(raw: RawMessage): ProcessedMessage {                                                                                      
+      return {                                                                                                                                       
+        type: 'text',                                                                                                                                
+        content: '[Contato compartilhado]',                                                                                                          
+        processedAt: new Date(),                                                                                                                     
+        metadata: { originalType: 'contact' },                                                                                                       
+      };                                                                                                                                             
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Processa tipo desconhecido                                                                                                                    
+     */                                                                                                                                              
+    private processUnknown(raw: RawMessage): ProcessedMessage {                                                                                      
+      return {                                                                                                                                       
+        type: 'text',                                                                                                                                
+        content: raw.content || '[Mensagem não suportada]',                                                                                          
+        processedAt: new Date(),                                                                                                                     
+        metadata: { originalType: raw.type },                                                                                                        
+      };                                                                                                                                             
+    }                                                                                                                                                
+                                                                                                                                                     
+    // ==========================================================================                                                                    
+    // HELPER METHODS                                                                                                                                
+    // ==========================================================================                                                                    
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Baixa mídia de uma URL                                                                                                                        
+     */                                                                                                                                              
+    private async downloadMedia(mediaUrl: string): Promise<Buffer> {                                                                                 
+      this.logger.debug('Downloading media', { url: mediaUrl.substring(0, 50) + '...' });                                                            
+                                                                                                                                                     
+      try {                                                                                                                                          
+        const response = await axios.get(mediaUrl, {                                                                                                 
+          responseType: 'arraybuffer',                                                                                                               
+          timeout: this.config.downloadTimeoutMs,                                                                                                    
+          maxContentLength: this.config.maxMediaSizeBytes,                                                                                           
+        });                                                                                                                                          
+                                                                                                                                                     
+        const buffer = Buffer.from(response.data);                                                                                                   
+                                                                                                                                                     
+        this.logger.debug('Media downloaded', { size: buffer.length });                                                                              
+                                                                                                                                                     
+        return buffer;                                                                                                                               
+      } catch (error) {                                                                                                                              
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';                                                               
+        this.logger.error('Error downloading media', { error: errorMessage });                                                                       
+        throw new Error(`Failed to download media: ${errorMessage}`);                                                                                
+      }                                                                                                                                              
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Transcreve áudio usando Whisper                                                                                                               
+     */                                                                                                                                              
+    private async transcribeAudio(base64: string, mimetype: string): Promise<string> {                                                               
+      if (!this.whisperClient) {                                                                                                                     
+        this.logger.warn('Whisper client not available for transcription');                                                                          
+        return '';                                                                                                                                   
+      }                                                                                                                                              
+                                                                                                                                                     
+      this.logger.debug('Transcribing audio', { mimetype });                                                                                         
+                                                                                                                                                     
+      try {                                                                                                                                          
+        const result = await this.whisperClient.transcribe({                                                                                         
+          audioBase64: base64,                                                                                                                       
+          mimeType: mimetype,                                                                                                                        
+          language: this.config.transcriptionLanguage,                                                                                               
+        });                                                                                                                                          
+                                                                                                                                                     
+        this.logger.debug('Audio transcribed', {                                                                                                     
+          textLength: result.text.length,                                                                                                            
+          duration: result.duration,                                                                                                                 
+        });                                                                                                                                          
+                                                                                                                                                     
+        return result.text;                                                                                                                          
+      } catch (error) {                                                                                                                              
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';                                                               
+        this.logger.error('Error transcribing audio', { error: errorMessage });                                                                      
+        return '';                                                                                                                                   
+      }                                                                                                                                              
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Normaliza texto (remove espaços extras, trim, etc)                                                                                            
+     */                                                                                                                                              
+    private normalizeText(text: string): string {                                                                                                    
+      if (!text) return '';                                                                                                                          
+                                                                                                                                                     
+      return text                                                                                                                                    
+        // Remove espaços extras                                                                                                                     
+        .replace(/\s+/g, ' ')                                                                                                                        
+        // Remove espaços no início e fim de linhas                                                                                                  
+        .split('\n')                                                                                                                                 
+        .map((line) => line.trim())                                                                                                                  
+        .join('\n')                                                                                                                                  
+        // Remove linhas vazias múltiplas                                                                                                            
+        .replace(/\n{3,}/g, '\n\n')                                                                                                                  
+        // Trim geral                                                                                                                                
+        .trim();                                                                                                                                     
+    }                                                                                                                                                
+                                                                                                                                                     
+    // ==========================================================================                                                                    
+    // CONFIGURATION                                                                                                                                 
+    // ==========================================================================                                                                    
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Atualiza configuração                                                                                                                         
+     */                                                                                                                                              
+    setConfig(config: Partial<MessageProcessorConfig>): void {                                                                                       
+      this.config = { ...this.config, ...config };                                                                                                   
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Retorna configuração atual                                                                                                                    
+     */                                                                                                                                              
+    getConfig(): MessageProcessorConfig {                                                                                                            
+      return { ...this.config };                                                                                                                     
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Define cliente Whisper                                                                                                                        
+     */                                                                                                                                              
+    setWhisperClient(client: WhisperClient): void {                                                                                                  
+      this.whisperClient = client;                                                                                                                   
+    }                                                                                                                                                
+                                                                                                                                                     
+    /**                                                                                                                                              
+     * Define cliente UAZAPI                                                                                                                         
+     */                                                                                                                                              
+    setUazapiClient(client: UazapiClient): void {                                                                                                    
+      this.uazapiClient = client;                                                                                                                    
+    }                                                                                                                                                
+  }                                                                                                                                                  
+                                                                                                                                                     
+  // ============================================================================                                                                    
+  // FACTORY FUNCTION                                                                                                                                
+  // ============================================================================                                                                    
+                                                                                                                                                     
+  /**                                                                                                                                                
+   * Cria uma instância do MessageProcessor                                                                                                          
+   */                                                                                                                                                
+  export function createMessageProcessor(options?: {                                                                                                 
+    whisperClient?: WhisperClient;                                                                                                                   
+    uazapiClient?: UazapiClient;                                                                                                                     
+    logger?: Logger;                                                                                                                                 
+    config?: Partial<MessageProcessorConfig>;                                                                                                        
+  }): MessageProcessor {                                                                                                                             
+    return new MessageProcessor(options);                                                                                                            
+  }                                                                        
