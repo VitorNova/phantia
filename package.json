@@ -1,0 +1,30 @@
+{
+  "name": "phantia",
+  "version": "1.0.0",
+  "description": "Phantia - AI-powered sales agent for WhatsApp",
+  "main": "navigate-frontend.js",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:ui": "npx playwright test --ui",
+    "test:headed": "npx playwright test --headed",
+    "test:debug": "npx playwright test --debug",
+    "test:login": "npx playwright test login.spec.ts --headed",
+    "test:dashboard": "npx playwright test dashboard.spec.ts --headed",
+    "test:report": "npx playwright show-report",
+    "playwright:install": "npx playwright install chromium"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:45407/git/VitorNova/phantia"
+  },
+  "keywords": ["playwright", "e2e", "testing"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.57.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "typescript": "^5.0.0"
+  }
+}
