@@ -1372,8 +1372,6 @@
   export interface GeminiResponseWithTools extends GeminiResponse {                                                                                  
     functionCall?: GeminiFunctionCall;                                                                                                               
     finishReason?: string;                                                                                                                           
-    /** Flag indicando possível alucinação - modelo disse que ia fazer algo mas não chamou tool */
-    possibleHallucination?: boolean;
   }                                                                                                                                                  
                                                                                                                                                      
   export interface GeminiResponse {                                                                                                                  
@@ -1598,41 +1596,16 @@
                                                                                                                                                      
           const generativeModel = this.genAI.getGenerativeModel(modelConfig);                                                                        
                                                                                                                                                      
-          // Iniciar chat com historico
-          // IMPORTANTE: Gemini exige que primeira mensagem seja do 'user'
-          let formattedHistory = history || [];
-
-          // Função para verificar se o primeiro item precisa de prefixo 'user'
-          const needsUserPrefix = (firstItem: any): boolean => {
-            if (!firstItem) return false;
-
-            // Caso 1: role é 'model'
-            if (firstItem.role === 'model') return true;
-
-            // Caso 2: primeiro item tem functionCall ou functionResponse nas parts
-            if (firstItem.parts && Array.isArray(firstItem.parts)) {
-              for (const part of firstItem.parts) {
-                if (part.functionCall || part.functionResponse) {
-                  return true;
-                }
-              }
-            }
-
-            // Caso 3: item é diretamente um functionResponse (formato alternativo)
-            if (firstItem.functionResponse || firstItem.functionCall) {
-              return true;
-            }
-
-            return false;
-          };
-
-          if (formattedHistory.length > 0 && needsUserPrefix(formattedHistory[0])) {
-            this.logger.info('History starts with model/function, adding user placeholder');
-            formattedHistory = [
-              { role: 'user' as const, parts: [{ text: '[Início da conversa]' }] },
-              ...formattedHistory,
-            ];
-          }
+          // Iniciar chat com historico                                                                                                              
+          // IMPORTANTE: Gemini exige que primeira mensagem seja do 'user'                                                                           
+          let formattedHistory = history || [];                                                                                                      
+          if (formattedHistory.length > 0 && formattedHistory[0].role === 'model') {                                                                 
+            this.logger.info('History starts with model, adding user placeholder');                                                                  
+            formattedHistory = [                                                                                                                     
+              { role: 'user' as const, parts: [{ text: '[Início da conversa]' }] },                                                                  
+              ...formattedHistory,                                                                                                                   
+            ];                                                                                                                                       
+          }                                                                                                                                          
                                                                                                                                                      
           const chat = generativeModel.startChat({                                                                                                   
             history: formattedHistory,                                                                                                               
@@ -1778,32 +1751,6 @@
                                                                                                                                                      
           // Extrair texto da resposta final                                                                                                         
           const text = response.text();                                                                                                              
-
-          // ============================================================
-          // DETECÇÃO DE ALUCINAÇÃO DE TOOL CALL
-          // Verifica se o modelo disse que ia fazer algo mas não chamou a tool
-          // ============================================================
-          const toolMentionPatterns = [
-            /vou (consultar|verificar|checar|buscar|agendar|criar|gerar)/i,
-            /deixa eu (ver|consultar|checar|verificar|buscar)/i,
-            /consultando (a |o |os |as )?(agenda|horários|disponibilidade|pagamento)/i,
-            /verificando (a |o |os |as )?(agenda|horários|disponibilidade|pagamento)/i,
-            /gerando (link|pagamento|cobrança)/i,
-            /criando (agendamento|evento|reunião)/i,
-            /só um (momento|instante|segundo).*consult/i,
-          ];
-
-          const mentionsToolAction = toolMentionPatterns.some(pattern => pattern.test(text));
-
-          // Se o texto menciona ação de tool mas não houve nenhuma chamada real
-          if (mentionsToolAction && iteration === 1) {
-            this.logger.warn('[GeminiClient] Possível alucinação detectada', {
-              textPreview: text.substring(0, 150),
-              mentionsAction: true,
-              hadFunctionCalls: false,
-              iteration,
-            });
-          }
                                                                                                                                                      
           const tokensUsed = response.usageMetadata                                                                                                  
             ? {                                                                                                                                      
@@ -1817,12 +1764,12 @@
             tokensUsed,                                                                                                                              
             iterations: iteration,                                                                                                                   
           });                                                                                                                                        
-          return {
-            text,
-            tokensUsed,
-            finishReason: 'stop',
-            possibleHallucination: mentionsToolAction && iteration === 1,
-          };
+                                                                                                                                                     
+          return {                                                                                                                                   
+            text,                                                                                                                                    
+            tokensUsed,                                                                                                                              
+            finishReason: 'stop',                                                                                                                    
+          };                                                                                                                                         
                                                                                                                                                      
         } catch (error) {                                                                                                                            
           this.logger.error('Chat with tools failed', {                                                                                              
@@ -2699,20 +2646,10 @@
     model?: string;                                                                                                                                  
   }                                                                                                                                                  
                                                                                                                                                      
-  export interface AIMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-    /** Dados de function call (quando assistant chama uma tool) */
-    functionCall?: {
-      name: string;
-      args: Record<string, unknown>;
-    };
-    /** Dados de function response (quando user retorna resultado da tool) */
-    functionResponse?: {
-      name: string;
-      response: Record<string, unknown>;
-    };
-  }
+  export interface AIMessage {                                                                                                                       
+    role: 'user' | 'assistant' | 'system';                                                                                                           
+    content: string;                                                                                                                                 
+  }                                                                                                                                                  
                                                                                                                                                      
   export interface AIChatOptions {                                                                                                                   
     systemPrompt?: string;                                                                                                                           
@@ -2888,39 +2825,11 @@
                                                                                                                                                      
     private async chatWithGemini(options: AIChatOptions): Promise<AIResponse> {                                                                      
       if (!this.geminiClient) throw new Error('Gemini client not initialized');                                                                      
-      // Converter histórico preservando functionCall e functionResponse
-      const geminiHistory = options.history?.map(msg => {
-        const role = msg.role === 'assistant' ? 'model' as const : 'user' as const;
-        const parts: any[] = [];
-
-        if (msg.content) {
-          parts.push({ text: msg.content });
-        }
-
-        if ((msg as any).functionCall) {
-          parts.push({
-            functionCall: {
-              name: (msg as any).functionCall.name,
-              args: (msg as any).functionCall.args
-            }
-          });
-        }
-
-        if ((msg as any).functionResponse) {
-          parts.push({
-            functionResponse: {
-              name: (msg as any).functionResponse.name,
-              response: (msg as any).functionResponse.response
-            }
-          });
-        }
-
-        if (parts.length === 0) {
-          parts.push({ text: '' });
-        }
-
-        return { role, parts };
-      });                                                                                                                                           
+                                                                                                                                                     
+      const geminiHistory = options.history?.map(msg => ({                                                                                           
+        role: msg.role === 'assistant' ? 'model' as const : 'user' as const,                                                                         
+        parts: [{ text: msg.content }],                                                                                                              
+      }));                                                                                                                                           
                                                                                                                                                      
       const response = await this.geminiClient.chat({                                                                                                
         systemPrompt: options.systemPrompt,                                                                                                          
@@ -3016,45 +2925,12 @@
     private async chatWithToolsGemini(options: AIChatWithToolsOptions): Promise<AIResponseWithTools> {                                               
       if (!this.geminiClient) throw new Error('Gemini client not initialized');                                                                      
                                                                                                                                                      
-      // Converter histórico preservando functionCall e functionResponse
-      const geminiHistory = options.history?.map(msg => {
-        const role = msg.role === 'assistant' ? 'model' as const : 'user' as const;
-        const parts: any[] = [];
-
-        // Adiciona texto se existir
-        if (msg.content) {
-          parts.push({ text: msg.content });
-        }
-
-        // Adiciona functionCall se existir (assistant chamou uma tool)
-        if (msg.functionCall) {
-          parts.push({
-            functionCall: {
-              name: msg.functionCall.name,
-              args: msg.functionCall.args
-            }
-          });
-        }
-
-        // Adiciona functionResponse se existir (resultado da tool)
-        if (msg.functionResponse) {
-          parts.push({
-            functionResponse: {
-              name: msg.functionResponse.name,
-              response: msg.functionResponse.response
-            }
-          });
-        }
-
-        // Se não tem parts, adiciona texto vazio para evitar erro
-        if (parts.length === 0) {
-          parts.push({ text: '' });
-        }
-
-        return { role, parts };
-      });
-
-      // Converter tools para formato Gemini
+      const geminiHistory = options.history?.map(msg => ({                                                                                           
+        role: msg.role === 'assistant' ? 'model' as const : 'user' as const,                                                                         
+        parts: [{ text: msg.content }],                                                                                                              
+      }));                                                                                                                                           
+                                                                                                                                                     
+      // Converter tools para formato Gemini                                                                                                         
       const geminiTools: GeminiFunctionDeclarationInput[] = options.tools?.map(tool => ({                                                            
         name: tool.name,                                                                                                                             
         description: tool.description,                                                                                                               
