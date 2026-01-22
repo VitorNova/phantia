@@ -1,0 +1,37 @@
+# ============================================
+# PHANTIA - Portainer
+# Gerenciamento visual de containers
+# ============================================
+
+version: '3.8'
+
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: phantia-portainer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer_data:/data
+    ports:
+      # Interface HTTPS (recomendado)
+      - "9443:9443"
+      # Interface HTTP (opcional, desabilitar em produção)
+      - "9000:9000"
+    networks:
+      - phantia-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  phantia-network:
+    external: true
+
+volumes:
+  portainer_data:
+    driver: local

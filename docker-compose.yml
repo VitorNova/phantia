@@ -1,0 +1,108 @@
+# ============================================
+# PHANTIA - Docker Compose
+# Stack completa: Backend + Redis
+# ============================================
+
+version: '3.8'
+
+services:
+  # ============================================
+  # REDIS - Cache de contexto (memória flush)
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: phantia-redis
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./redis/data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - phantia-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Não expor porta externamente por segurança
+    # ports:
+    #   - "6379:6379"
+
+  # ============================================
+  # BACKEND - API + Orquestrador de Agentes
+  # ============================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${DOCKER_USER:-phantia}/phantia-backend:${VERSION:-latest}
+    container_name: phantia-backend
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      # App
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # Redis
+      REDIS_HOST: phantia-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+      # Supabase (PostgreSQL gerenciado)
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_KEY: ${SUPABASE_KEY}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+
+      # AI Providers
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GOOGLE_AI_KEY: ${GOOGLE_AI_KEY}
+
+      # WhatsApp (UAZAPI)
+      UAZAPI_URL: ${UAZAPI_URL}
+      UAZAPI_TOKEN: ${UAZAPI_TOKEN}
+
+      # Google Calendar
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REFRESH_TOKEN: ${GOOGLE_REFRESH_TOKEN}
+
+      # Asaas (Pagamentos)
+      ASAAS_API_KEY: ${ASAAS_API_KEY}
+      ASAAS_ENVIRONMENT: ${ASAAS_ENVIRONMENT:-sandbox}
+
+      # ElevenLabs (Voz)
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID}
+
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - "${PORT:-3000}:3000"
+    networks:
+      - phantia-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+# ============================================
+# NETWORKS
+# ============================================
+networks:
+  phantia-network:
+    driver: bridge
+    name: phantia-network
+
+# ============================================
+# VOLUMES
+# ============================================
+volumes:
+  redis_data:
+    driver: local
